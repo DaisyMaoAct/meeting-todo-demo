@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f0e7;
+  --foreground: #1d1a16;
+  --card: #fffdf8;
+  --line: #e4dccf;
+  --muted: #6d655c;
+  --accent: #0f5e57;
+  --attention: #8a4b08;
+  --attention-bg: #fff3df;
+  --danger: #8d2e2e;
+  --danger-bg: #fdecec;
+  --ok: #1c6b43;
+  --ok-bg: #e6f6ee;
+  --pending: #3d4c63;
+  --pending-bg: #eef2f6;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-attention: var(--attention);
+  --color-attention-bg: var(--attention-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-pending: var(--pending);
+  --color-pending-bg: var(--pending-bg);
+  --font-sans: var(--font-sans), "WenQuanYi Micro Hei", "Droid Sans Fallback", "Noto Sans CJK SC",
+    sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), "WenQuanYi Micro Hei", "Droid Sans Fallback", "Noto Sans CJK SC",
+    sans-serif;
+}
+
+.attention-field::placeholder {
+  color: var(--attention);
+  opacity: 1;
+}
