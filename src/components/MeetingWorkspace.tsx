@@ -78,6 +78,7 @@ export function MeetingWorkspace() {
       return;
     }
     try {
+      DocxTextReader.assertFileSize(file.size);
       const text = await DocxTextReader.read(await file.arrayBuffer());
       if (!text.trim()) {
         update((current) => SessionActions.failExtract(current, "文档里没有可读取的正文。"));

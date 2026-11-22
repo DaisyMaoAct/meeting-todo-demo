@@ -1,3 +1,5 @@
+import type { KeyboardEvent } from "react";
+import { RoleKeys } from "@/domain/RoleKeys";
 import type { Role } from "@/domain/types";
 
 const roles = [
@@ -18,7 +20,12 @@ export function HeaderBar({ role, onRole }: { role: Role; onRole: (role: Role) =
             <h1 className="text-xl font-semibold leading-tight">会议待办</h1>
           </div>
         </div>
-        <div role="radiogroup" aria-label="当前角色" className="flex rounded-full border border-line bg-background p-1">
+        <div
+          role="radiogroup"
+          aria-label="当前角色"
+          className="flex rounded-full border border-line bg-background p-1"
+          onKeyDown={(event) => moveRole(event, role, onRole)}
+        >
           {roles.map((item) => {
             const selected = role === item.id;
             return (
@@ -27,6 +34,7 @@ export function HeaderBar({ role, onRole }: { role: Role; onRole: (role: Role) =
                 type="button"
                 role="radio"
                 aria-checked={selected}
+                tabIndex={selected ? 0 : -1}
                 data-testid={`role-${item.id}`}
                 onClick={() => onRole(item.id)}
                 className={
@@ -43,4 +51,12 @@ export function HeaderBar({ role, onRole }: { role: Role; onRole: (role: Role) =
       </div>
     </header>
   );
+}
+
+function moveRole(event: KeyboardEvent<HTMLDivElement>, role: Role, onRole: (role: Role) => void) {
+  const next = RoleKeys.next(role, event.key);
+  if (!next) return;
+  event.preventDefault();
+  onRole(next);
+  event.currentTarget.querySelector<HTMLButtonElement>(`[data-testid="role-${next}"]`)?.focus();
 }

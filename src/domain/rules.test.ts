@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import JSZip from "jszip";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { Calendar } from "./Calendar";
@@ -6,7 +7,9 @@ import { Directory } from "./Directory";
 import { DocxTextReader } from "./DocxTextReader";
 import { DueDateResolver } from "./DueDateResolver";
 import { MeetingCatalog } from "./MeetingCatalog";
+import { NextMeetingResolver } from "./NextMeetingResolver";
 import { OwnerResolver } from "./OwnerResolver";
+import { RoleKeys } from "./RoleKeys";
 import { RulesEngine } from "./RulesEngine";
 import { TodoEdits } from "./TodoEdits";
 
@@ -31,6 +34,13 @@ describe("日期规则", () => {
     expect(DueDateResolver.resolve("下次会议前补齐", "2026-11-07", null)).toBeNull();
     expect(DueDateResolver.resolve("下次会议前补齐", "2026-11-07", "2026-11-01")).toBeNull();
   });
+
+  it("下次会议早于会议日时改用下一年", () => {
+    expect(NextMeetingResolver.resolve("下次例会：1 月 8 日。", "2026-12-20")).toBe("2027-01-08");
+    expect(NextMeetingResolver.resolve("下次例会：11 月 14 日。", "2026-11-07")).toBe("2026-11-14");
+    const next = NextMeetingResolver.resolve("下次例会：1 月 8 日。", "2026-12-20");
+    expect(DueDateResolver.resolve("下次会议前交报告", "2026-12-20", next)).toBe("2027-01-08");
+  });
 });
 
 describe("负责人规则", () => {
@@ -41,6 +51,8 @@ describe("负责人规则", () => {
     expect(OwnerResolver.resolve("HR 那边看看", contacts)).toBeNull();
     expect(OwnerResolver.resolve("李工和小李一起排班", contacts)).toBeNull();
     expect(OwnerResolver.resolve("请张伟确认", contacts)).toBeNull();
+    expect(OwnerResolver.resolve("@张伟（采）尽快确认", contacts)).toBeNull();
+    expect(OwnerResolver.resolve("@张伟（采购部）尽快确认", contacts)).toBeNull();
   });
 
   it("括号职务能唯一区分同名，改由接手覆盖原负责人", () => {
@@ -53,6 +65,28 @@ describe("负责人规则", () => {
       contacts,
     );
     expect(owner?.id).toBe("sun-hao");
+  });
+});
+
+describe("行动行", () => {
+  it("非样例句式的行动行仍保留，非行动和日程行继续排除", () => {
+    const todos = RulesEngine.extract(
+      "请孙浩周五前交周报。\n服务器扩容的事情大家再想想。\n下次例会：1 月 8 日。",
+      "2026-11-06",
+    );
+    expect(todos.map((todo) => todo.title)).toEqual(["请孙浩周五前交周报。"]);
+    expect(todos[0]?.ownerId).toBe("sun-hao");
+    expect(todos[0]?.dueDate).toBe("2026-11-06");
+  });
+});
+
+describe("角色切换", () => {
+  it("方向键在发起人和负责人之间循环", () => {
+    expect(RoleKeys.next("organizer", "ArrowRight")).toBe("assignee");
+    expect(RoleKeys.next("assignee", "ArrowLeft")).toBe("organizer");
+    expect(RoleKeys.next("organizer", "ArrowUp")).toBe("assignee");
+    expect(RoleKeys.next("assignee", "ArrowDown")).toBe("organizer");
+    expect(RoleKeys.next("organizer", "Enter")).toBeNull();
   });
 });
 
@@ -102,5 +136,17 @@ describe("docx 样例", () => {
         RulesEngine.extract(text, meeting!.date),
       );
     }
+  });
+
+  it("超过 4 MB 的文件在解析前拒绝", async () => {
+    const huge = new Uint8Array(DocxTextReader.maxFileBytes + 1);
+    await expect(DocxTextReader.read(huge)).rejects.toThrow("这份 docx 超过 4 MB，请换一份较小的文件。");
+  });
+
+  it("正文超过上限时拒绝解析", async () => {
+    const zip = new JSZip();
+    zip.file("word/document.xml", "a".repeat(DocxTextReader.maxDocumentXmlBytes + 1));
+    const docx = await zip.generateAsync({ type: "uint8array" });
+    await expect(DocxTextReader.read(docx)).rejects.toThrow("docx 正文过长，无法解析。");
   });
 });

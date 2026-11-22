@@ -1,7 +1,7 @@
 export class ActionTitleRules {
   static resolve(item: string): string | null {
     const text = item.trim();
-    if (this.isNonAction(text) || this.isScheduleNote(text)) return null;
+    if (!text || this.isNonAction(text) || this.isScheduleNote(text)) return null;
     return (
       this.yieldInvestigation(text) ??
       this.supplierQuote(text) ??
@@ -9,7 +9,8 @@ export class ActionTitleRules {
       this.shiftRoster(text) ??
       this.deliveryConfirmation(text) ??
       this.qualityCases(text) ??
-      this.migrationDraft(text)
+      this.migrationDraft(text) ??
+      text
     );
   }
 

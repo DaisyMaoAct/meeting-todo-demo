@@ -51,9 +51,7 @@ export class OwnerResolver {
 
   private static tagMatches(title: string, tag: string): boolean {
     const normalize = (value: string) => value.replace(/\s+/g, "");
-    const left = normalize(title);
-    const right = normalize(tag);
-    return left === right || left.includes(right) || right.includes(left);
+    return normalize(title) === normalize(tag);
   }
 
   private static hasUnresolvedPersonHint(item: string): boolean {
