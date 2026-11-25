@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { AssignmentService } from "@/domain/AssignmentService";
 import { DateField } from "@/domain/DateField";
 import { Directory } from "@/domain/Directory";
@@ -61,13 +62,20 @@ export function TodoPanel({
         <>
           <p className="mt-3 text-sm text-muted">
             {session.phase === "confirmed"
-              ? `已派发 ${tally.assigned} 条。${
+              ? `已派发 ${tally.assigned + tally.completed} 条。${
+                  tally.completed > 0 ? `其中 ${tally.completed} 条已完成。` : ""
+                }${
                   tally.unassigned > 0
-                    ? `${tally.unassigned} 条负责人为空，仍留在列表中，未派发。`
+                    ? `${tally.unassigned} 条负责人为空，仍留在列表中，未派发，也没有通知。`
                     : ""
                 }`
               : "确认前不会派发。负责人为空或没有可用截止日期时，标成需要处理。"}
           </p>
+          {session.phase === "confirmed" ? (
+            <p className="mt-1 text-sm text-muted">
+              有负责人的条目已写入应用内通知。不会发邮件。负责人从通知或「查看」进入详情后，可以标记已完成。
+            </p>
+          ) : null}
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[760px] border-collapse text-sm" data-testid="todo-list">
               <caption className="sr-only">提取出的待办</caption>
@@ -76,7 +84,7 @@ export function TodoPanel({
                   <th className="px-2 py-2 font-medium">事项</th>
                   <th className="w-48 px-2 py-2 font-medium">负责人</th>
                   <th className="w-40 px-2 py-2 font-medium">截止时间</th>
-                  <th className="w-24 px-2 py-2 font-medium">状态</th>
+                  <th className="w-36 px-2 py-2 font-medium">状态</th>
                   <th className="w-28 px-2 py-2 font-medium">标记</th>
                 </tr>
               </thead>
@@ -104,11 +112,11 @@ export function TodoPanel({
               确认并派发
             </button>
             <p className="text-sm text-muted">
-              {session.phase === "confirmed"
-                ? "已经确认。负责人为空的条目没有派发。"
+                {session.phase === "confirmed"
+                ? "已经确认。负责人为空的条目没有派发，也没有通知。"
                 : RoleGate.canDispatch(session.role)
                   ? "当前是发起人，可以确认并派发。"
-                  : "当前是负责人视角，不能确认并派发。"}
+                  : "当前是负责人视角，不能确认并派发。请在页头选择你是谁。"}
             </p>
           </div>
         </>
@@ -188,9 +196,18 @@ function TodoRow({
         >
           {StatusTone.label(todo.status)}
         </span>
+        {locked ? (
+          <Link
+            href={`/todos/${todo.id}`}
+            data-testid={`todo-open-${index}`}
+            className="ml-2 text-xs font-medium text-accent underline"
+          >
+            查看
+          </Link>
+        ) : null}
       </td>
       <td className="px-2 py-3">
-        {todo.needsAttention ? (
+        {todo.status !== "completed" && todo.needsAttention ? (
           <span
             data-testid={`todo-flag-${index}`}
             className="inline-flex rounded-full bg-attention-bg px-2 py-0.5 text-xs font-semibold text-attention"

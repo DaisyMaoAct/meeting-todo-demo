@@ -15,11 +15,13 @@ export class AssignmentService {
     assigned: number;
     unassigned: number;
     pending: number;
+    completed: number;
   } {
     return {
       assigned: todos.filter((todo) => todo.status === "assigned").length,
       unassigned: todos.filter((todo) => todo.status === "unassigned").length,
       pending: todos.filter((todo) => todo.status === "pending").length,
+      completed: todos.filter((todo) => todo.status === "completed").length,
     };
   }
 }
