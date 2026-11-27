@@ -38,6 +38,11 @@ export class Calendar {
     return end.toISOString().slice(0, 10);
   }
 
+  static display(iso: string): string {
+    const [year, month, day] = iso.split("-");
+    return `${year}年${Number(month)}月${Number(day)}日（${this.weekday(iso)}）`;
+  }
+
   static weekday(iso: string): string {
     const labels = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
     return labels[this.parse(iso).getUTCDay()];

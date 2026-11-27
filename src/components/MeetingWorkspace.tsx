@@ -1,56 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
 import { DocxTextReader } from "@/domain/DocxTextReader";
 import { ExtractionError } from "@/domain/ExtractionError";
 import { ExtractionRunner } from "@/domain/ExtractionRunner";
 import { MeetingCatalog } from "@/domain/MeetingCatalog";
 import { SampleLibrary } from "@/domain/SampleLibrary";
 import { SessionActions } from "@/domain/SessionActions";
-import { SessionStore } from "@/domain/SessionStore";
-import type { Role, SessionState, TodoPatch } from "@/domain/types";
-import { HeaderBar } from "./HeaderBar";
+import type { TodoPatch } from "@/domain/types";
 import { MeetingPanel } from "./MeetingPanel";
 import { MinutesPanel } from "./MinutesPanel";
+import { useSession } from "./SessionProvider";
 import { TodoPanel } from "./TodoPanel";
 
-function subscribeToClient() {
-  return () => {};
-}
-
-function readClient() {
-  return true;
-}
-
-function readServer() {
-  return false;
-}
-
 export function MeetingWorkspace() {
-  const isClient = useSyncExternalStore(subscribeToClient, readClient, readServer);
-  const [session, setSession] = useState<SessionState | null>(null);
+  const { session, update } = useSession();
   const extracting = useRef(false);
   const request = useRef(0);
 
-  if (isClient && session === null) {
-    setSession(SessionStore.load() ?? SessionStore.empty());
-  }
-
   useEffect(() => {
-    if (!session) return;
-    SessionStore.save(session);
-  }, [session]);
+    const requested = new URLSearchParams(window.location.search).get("meeting");
+    if (!requested || !MeetingCatalog.byId(requested)) return;
+    update((current) => {
+      if (current.meetingId === requested) return current;
+      const untouched =
+        current.phase === "idle" &&
+        current.todos.length === 0 &&
+        current.minutes === "" &&
+        current.notifications.length === 0;
+      if (!untouched) return current;
+      return SessionActions.selectMeeting(current, requested);
+    });
+  }, [update]);
 
-  if (!session) {
-    return <div className="grid min-h-full place-items-center text-sm text-muted">正在恢复会话…</div>;
-  }
+  if (!session) return null;
 
   const view = session;
   const meeting = view.meetingId ? MeetingCatalog.byId(view.meetingId) : null;
-
-  function update(recipe: (state: SessionState) => SessionState) {
-    setSession((current) => (current ? recipe(current) : current));
-  }
 
   function selectMeeting(meetingId: string) {
     request.current += 1;
@@ -137,13 +123,7 @@ export function MeetingWorkspace() {
     update((current) => SessionActions.confirm(current));
   }
 
-  function setRole(role: Role) {
-    update((current) => SessionActions.setRole(current, role));
-  }
-
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <HeaderBar role={view.role} onRole={setRole} />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6 md:px-6">
         <MeetingPanel
           meetingId={view.meetingId}
@@ -168,6 +148,5 @@ export function MeetingWorkspace() {
         />
         <TodoPanel session={view} onEdit={editTodo} onConfirm={confirm} />
       </main>
-    </div>
   );
 }
